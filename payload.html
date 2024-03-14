@@ -1,0 +1,210 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+	<title>Payload</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<noscript>
+		<link rel="stylesheet" href="assets/css/noscript.css" />
+	</noscript>
+</head>
+
+<body class="is-preload">
+	<div id="page-wrapper">
+
+		<!-- Header -->
+		<header id="header">
+			<!--
+			<h1 id="logo"><a href="index.html">Palo Alto Dynamics</a></h1>
+			-->
+			<nav id="nav">
+				<ul>
+					<li><a href="index.html">Home</a></li>
+					<li>
+						<a href="#">Architecture</a>
+						<ul>
+							<li><a href="chassis.html">Chassis</a></li>
+							<li><a href="drive.html">Drive</a></li>
+							<li><a href="payload.html">Payload</a></li>
+							<li><a href="sensing.html">Sensing</a></li>
+							<li><a href="code.html">Control</a></li>
+						</ul>
+					</li>
+					<li><a href="#" class="button primary">Sign Up</a></li>
+				</ul>
+			</nav>
+		</header>
+
+		<!-- Main -->
+		<div id="main" class="wrapper style1">
+			<div class="container">
+				<header class="major">
+					<h2>Payload Systems</h2>
+					<p>Delivery mechanism design, components, manufacturing, testing</p>
+					<!--
+					<p>Ipsum dolor feugiat aliquam tempus sed magna lorem consequat accumsan</p>
+					-->
+				</header>
+				<div class="row gtr-150">
+					<div class="col-4 col-12-medium">
+
+						<!-- Sidebar -->
+						<section id="sidebar">
+							<h3>Components</h3>
+							<hr />
+							<section>
+								<h4>Initial Concepts</h4>
+								<p>We initially debated three design options. The first was a fixed delivery system,
+									with a servo operated side-selector which released balls to either side, depending
+									on which side of the board the bot was on:</p>
+								<a href="#" class="image fit"><img src="images/payload1.jpg" alt="" /></a>
+								<p>The second option rotated to position the chute over the basket before releasing the
+									payload:</p>
+								<a href="#" class="image fit"><img src="images/payload2.jpg" alt="" /></a>
+								<p>The third was a projectile system which shot the balls into the basket:</p>
+								<a href="#" class="image fit"><img src="images/payload3.jpg" alt="" /></a>
+								<hr />
+								<h4>Final Concept</h4>
+								<a href="#" class="image fit"><img src="images/payload4.jpg" alt="" /></a>
+								<p>We wanted a simple payload delivery system with minimal operating parts, so early on
+									we selected design option 1. This design also simplified programming by eliminating
+									the need to turn the bot to face the shooting zone, or rotate the payload delivery
+									chute. The delivery side is determined by the bot during its initial orientation in
+									the start zone. When it arrives at the shooting zone, a servo activates, moving the
+									selector to open a path to the appropriate delivery chute, allowing the balls to
+									fall into the basket.
+								</p>
+							</section>
+						</section>
+
+					</div>
+					<div class="col-8 col-12-medium imp-medium">
+
+						<!-- Content -->
+						<section id="content">
+							<a href="#" class="image fit"><img src="images/payload8.jpg" alt="" /></a>
+							<h3>Design Evolution</h3>
+							<p>Early designs were based on a fully 3d printed construction. However, the size, mass, and
+								print times proved impractical so other options were sought. We sourced inexpensive 2”
+								diameter tubing to serve as the hopper and delivery chutes, and only used 3d printed
+								parts for the connections.
+							</p>
+							<hr />
+							<section>
+								<h4>Mounting Plate</h4>
+								<p>The first design for the mount which connects and supports the tubes was unreliable.
+									So, we redesigned the parts to make the deployment angles more aggressive, which
+									improved offloads. </p>
+								<a href="#" class="image fit"><img src="images/payload5.jpg" alt="" /></a>
+								<p>The final mounting plate, shown on the right, included improvements in weight and
+									size, and added a slope to the delivery chute mounts to improve offload consistency
+									from earlier designs (left).
+								</p>
+							</section>
+							<section>
+								<h4>Tube Supports</h4>
+								<a href="#" class="image fit"><img src="images/payload6.jpg" alt="" /></a>
+								<p>Tube supports evolved to include a 20 degree backward sweep, and a 10 degree downward
+									sweep to align balls with the center of the basket.</p>
+							</section>
+							<section>
+								<h4>Side-Selector</h4>
+								<p>The selector proved to be a considerable design challenge. The textured surface of
+									the balls has a very high coefficient of friction, so the balls would jam in the
+									chutes. The horizontal design, shown on the left side of the image below, did not
+									allow the balls to fall far enough to develop the energy necessary to overcome that
+									friction force. To correct this, we designed a vertically oriented selector which
+									held the balls higher, allowing them to fall farther before being directed left or
+									right. Then, we adapted the design to provide the smoothest transition from the
+									hopper to the deployment chute, eventually landing on the design seen on the right
+									side of the image below.
+								</p>
+								<a href="#" class="image fit"><img src="images/payload7.jpg" alt="" /></a>
+								<p>The horizontal model did not allow ball to accelerate enough to overcome the friction
+									of the ball’s suede-like texture. The final version has a radius that matches the
+									curve between the hopper and the delivery chute. </p>
+							</section>
+							<hr />
+							<h3>Controls</h3>
+							<a href="#" class="image fit"><img src="images/payload9.jpg" alt="" /></a>
+							<p>The payload deployment system is controlled by a single servo. While it is a simple
+								operation, two issues arose during testing. </p>
+							<section>
+								<h4>Problem 1: Servo Oscillation</h4>
+								<p>Because the servo is powered directly from our 5V DC bus, it powers on before the
+									Arduino Uno used to control its PWM inputs. This meant that when the bot was powered
+									on, the servo would oscillate until the Arduino powered on and fixed its position,
+									sometimes up to 20°. This would often cause the selector to jam against the first
+									ball, preventing deployment, and stressing the servo.
+								</p>
+								<p>Apparently, this is a common problem, and research pointed us to a quick solution. By
+									adding a 10K ohm resistor between the PWM and the +5V connectors, the servo position
+									is essentially fixed during power up, correcting the problem. A diagram of the
+									solution is shown below.
+								</p>
+								<a href="#" class="image fit"><img src="images/payload10.jpg" alt="" /></a>
+								<h4>Problem 2: Ball Jamming</h4>
+								<p>The second problem was that the balls would sometimes jam against the selector during
+									deployment. This was attributed to two factors. First, there is a high coefficient
+									of friction between the selector and the ball. This was mitigated by the use of
+									low-friction tape, as seen in the image below.
+								</p>
+								<a href="#" class="image fit"><img src="images/payload11.jpg" alt="" /></a>
+								<p>Second, the lateral orientation of the balls in the hopper, which is random based on
+									how they fall while being loaded, could lead to jamming. The solution was to code in
+									a “kick” to one side, prior to rotating into its final deployed position. This
+									“kick” ensured the balls were oriented properly before the selector was positioned
+									for deployment. The sequence can be seen in the image below. </p>
+								<a href="#" class="image fit"><img src="images/payload12.jpg" alt="" /></a>
+								<p>This realignment sequence did help with deployment consistency, and we were able to
+									obtain a >90% deployment reliability. However, challenges with code implementation
+									meant that we were not able to fully overcome the geometric problems with our
+									design.
+								</p>
+								<p>On reflection, we could have refined the relative positioning of the hopper and
+									deployment tubes to eliminate the need for the “kick”. By increasing the distance
+									between the hopper and deployment tubes, the diameter for the tangent circle
+									connecting the tubes would have increased, improving the angle of incidence of the
+									balls on the selector, and reducing energy losses due to impact and friction.
+									However, overall, the payload delivery system proved adequately reliable, fast to
+									offload (under 2 seconds), and incredibly fast to reload (<1 second). </p>
+							</section>
+
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Footer -->
+		<footer id="footer">
+			<ul class="icons">
+				<li><a href="#" class="icon brands alt fa-twitter"><span class="label">Twitter</span></a></li>
+				<li><a href="#" class="icon brands alt fa-facebook-f"><span class="label">Facebook</span></a></li>
+				<li><a href="#" class="icon brands alt fa-linkedin-in"><span class="label">LinkedIn</span></a></li>
+				<li><a href="#" class="icon brands alt fa-instagram"><span class="label">Instagram</span></a></li>
+				<li><a href="#" class="icon brands alt fa-github"><span class="label">GitHub</span></a></li>
+				<li><a href="#" class="icon solid alt fa-envelope"><span class="label">Email</span></a></li>
+			</ul>
+			<ul class="copyright">
+				<li>&copy; Palo Alto Dynamics. All rights reserved.</li>
+				<li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+			</ul>
+		</footer>
+
+	</div>
+
+	<!-- Scripts -->
+	<script src="assets/js/jquery.min.js"></script>
+	<script src="assets/js/jquery.scrolly.min.js"></script>
+	<script src="assets/js/jquery.dropotron.min.js"></script>
+	<script src="assets/js/jquery.scrollex.min.js"></script>
+	<script src="assets/js/browser.min.js"></script>
+	<script src="assets/js/breakpoints.min.js"></script>
+	<script src="assets/js/util.js"></script>
+	<script src="assets/js/main.js"></script>
+
+</body>
+
+</html>

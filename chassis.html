@@ -1,0 +1,155 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+	<title>Payload</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<noscript>
+		<link rel="stylesheet" href="assets/css/noscript.css" />
+	</noscript>
+</head>
+
+<body class="is-preload">
+	<div id="page-wrapper">
+
+		<!-- Header -->
+		<header id="header">
+			<!--
+			<h1 id="logo"><a href="index.html">Palo Alto Dynamics</a></h1>
+			-->
+			<nav id="nav">
+				<ul>
+					<li><a href="index.html">Home</a></li>
+					<li>
+						<a href="#">Architecture</a>
+						<ul>
+							<li><a href="chassis.html">Chassis</a></li>
+							<li><a href="drive.html">Drive</a></li>
+							<li><a href="payload.html">Payload</a></li>
+							<li><a href="sensing.html">Sensing</a></li>
+							<li><a href="code.html">Control</a></li>
+						</ul>
+					</li>
+					<li><a href="#" class="button primary">Sign Up</a></li>
+				</ul>
+			</nav>
+		</header>
+
+		<!-- Main -->
+		<div id="main" class="wrapper style1">
+			<div class="container">
+				<header class="major">
+					<h2>Chassis Design and Architecture</h2>
+					<p>Design choices, components, manufacturing methods</p>
+					<!--
+					<p>Ipsum dolor feugiat aliquam tempus sed magna lorem consequat accumsan</p>
+					-->
+				</header>
+				<div class="row gtr-150">
+					<div class="col-4 col-12-medium">
+
+						<!-- Sidebar -->
+						<section id="sidebar">
+							<h3>Evolution of Chassis Design</h3>
+							<hr />
+							<section>
+								<h4>Initial Concept</h4>
+								<p>The initial design was smaller, designed for
+									smaller mecanum wheels and without room for tight sensor integration. </p>
+								<a href="#" class="image fit"><img src="images/chassis1.jpg" alt="" /></a>
+								<a href="#" class="image fit"><img src="images/chassis2x.jpg" alt="" /></a>
+								<hr />
+								<h4>Final Concept</h4>
+								<p>The final concept was larger, including space for four inset LiDAR sensors and space
+									for lie-flat batteries, and was even more tightly integrated than the initial
+									design. The density of components in
+									the chassis, while cool, was not really necessary. Granted, it gave us more margin
+									for error when traversing the gap, but the increase in fiddlyness was likely not
+									worth it.
+								</p>
+								<a href="#" class="image fit"><img src="images/chassis6.jpg" alt="" /></a>
+							</section>
+						</section>
+
+					</div>
+					<div class="col-8 col-12-medium imp-medium">
+
+						<!-- Content -->
+						<section id="content">
+							<a href="#" class="image fit"><img src="images/chassis4.jpg" alt="" /></a>
+							<h3>High-Level Design</h3>
+							<p>At its core, our design aims to create a robust hardware platform that performs as
+								expected, so no unnecessary complexity is created in code. Our motor and wheel choices
+								reflect this ethos. Specifically, our drivetrain consists of four independently stepper
+								driven mecanum wheels.
+							</p>
+							<hr />
+							<section>
+								<h4>Motors and Wheels</h4>
+								<a href="#" class="image fit"><img src="images/chassis3.jpg" alt="" /></a>
+								<p>While this initially might seem like a strange choice, given stepper motors’ lower
+									torque and high power requirements, it really played in our favor. Firstly, since we
+									were using four wheel drive, torque was not at all an issue and we easily were able
+									to make it up the ramp at speed. But the big selling point of steppers is their
+									reliable control. Since you are commanding steps per second, you can be confident
+									that all your motors will spin at the same speed, regardless of battery charge. This
+									meant that we didn't have to implement any control logic that dealt with drift,
+									compensated for battery charge, and we could use the mecanums so reliably that we
+									never had to worry about steering. All our motion was lateral translation. The only
+									issue that came up was that steppers do not have closed loop control, this was only
+									a problem since we didn't have time to implement acceleration, commanding a step
+									change in speed sometime meant we lost a couple of steps, which caused the bot to
+									turn a couple of degrees upon acceleration and deceleration. </p>
+							</section>
+							<section>
+								<h4>Chassis</h4>
+								<a href="#" class="image fit"><img src="images/chassis5.jpg" alt="" /></a>
+								<p>As for the chassis, the entire thing was quite tightly integrated and fully 3D
+									printed. I would highly recommend the latter – while laser cutting seems attractive,
+									it is very easy to design robust single components for 3D printing, with geometries
+									that are hard to accomplish with the laser. Also, iteration time is faster (the
+									printer does all the work) and you don’t have to deal with finger joints and the
+									slop that comes with them. Moreover, not a single part we printed was printed with
+									supports, I would highly recommend putting in the design work to make this happen,
+									as it reduces print and iteration time. The printer can also be pushed beyond what
+									the slicer tells you is possible.</p>
+							</section>
+
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Footer -->
+		<footer id="footer">
+			<ul class="icons">
+				<li><a href="#" class="icon brands alt fa-twitter"><span class="label">Twitter</span></a></li>
+				<li><a href="#" class="icon brands alt fa-facebook-f"><span class="label">Facebook</span></a></li>
+				<li><a href="#" class="icon brands alt fa-linkedin-in"><span class="label">LinkedIn</span></a></li>
+				<li><a href="#" class="icon brands alt fa-instagram"><span class="label">Instagram</span></a></li>
+				<li><a href="#" class="icon brands alt fa-github"><span class="label">GitHub</span></a></li>
+				<li><a href="#" class="icon solid alt fa-envelope"><span class="label">Email</span></a></li>
+			</ul>
+			<ul class="copyright">
+				<li>&copy; Palo Alto Dynamics. All rights reserved.</li>
+				<li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+			</ul>
+		</footer>
+
+	</div>
+
+	<!-- Scripts -->
+	<script src="assets/js/jquery.min.js"></script>
+	<script src="assets/js/jquery.scrolly.min.js"></script>
+	<script src="assets/js/jquery.dropotron.min.js"></script>
+	<script src="assets/js/jquery.scrollex.min.js"></script>
+	<script src="assets/js/browser.min.js"></script>
+	<script src="assets/js/breakpoints.min.js"></script>
+	<script src="assets/js/util.js"></script>
+	<script src="assets/js/main.js"></script>
+
+</body>
+
+</html>
