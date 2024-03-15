@@ -32,7 +32,8 @@
 							<li><a href="code.html">Control</a></li>
 						</ul>
 					</li>
-					<li><a href="#" class="button primary">Sign Up</a></li>
+					<li><a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley"
+							class="button primary">Sign Up</a></li>
 				</ul>
 			</nav>
 		</header>
@@ -145,21 +146,24 @@
 									the 0:1000 range required for stepper motor control from 0 steps/sec to 1000
 									steps/sec). Encoding and decoding are shown below:
 								</p>
-								<code>
+								<pre><code>
 									// encode command
 									void send_control_command( int command, int power_level ) {
 									command = command << 4;
 									byte bitVal = command + power_level;
 									Serial.write(bitVal);
 									}
-								</code>
-								<code>
+								</code></pre>
+								<pre><code>
 									// decode command
 									byte data_recv = Serial.read();
 									int command = (data_recv & UPPER_4_BIT_MASK) >> 4;
 									int speed = map( data_recv & LOWER_4_BIT_MASK, 0, MAX_PL, 0, MAX_SPEED );
-								</code>
+								</code></pre>
 							</section>
+							<li>Code can be found in the GitHub repository <a
+									href="https://github.com/jbaileyiii/ME210/tree/main/Code/final_sketches">here.</a>
+							</li>
 						</section>
 
 					</div>
