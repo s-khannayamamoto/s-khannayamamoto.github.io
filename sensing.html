@@ -1,13 +1,8 @@
 <!DOCTYPE HTML>
-<!--
-	Landed by HTML5 UP
-	html5up.net | @ajlkn
-	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
--->
 <html>
 
 <head>
-	<title>No Sidebar - Landed by HTML5 UP</title>
+	<title>Payload</title>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" href="assets/css/main.css" />
@@ -46,62 +41,117 @@
 		<div id="main" class="wrapper style1">
 			<div class="container">
 				<header class="major">
-					<h2>Sensing systems</h2>
-					<p>Sensing and control methodologies, design considerations, components, code</p>
+					<h2>Sensing Systems</h2>
+					<p>Sensing and control, design considerations, and components</p>
+					<!--
+					<p>Ipsum dolor feugiat aliquam tempus sed magna lorem consequat accumsan</p>
+					-->
 				</header>
+				<div class="row gtr-150">
+					<div class="col-4 col-12-medium">
 
-				<!-- Content -->
-				<section id="content">
-					<a href="#" class="image fit"><img src="images/paloAltoDynamics.jpg" alt="" /></a>
-					<h3>Dolore Amet Consequat</h3>
-					<p>Aliquam massa urna, imperdiet sit amet mi non, bibendum euismod est. Curabitur mi justo,
-						tincidunt vel eros ullamcorper, porta cursus justo. Cras vel neque eros. Vestibulum diam quam,
-						mollis at magna consectetur non, malesuada quis augue. Morbi tincidunt pretium interdum est.
-						Curabitur mi justo, tincidunt vel eros ullamcorper, porta cursus justo. Cras vel neque eros.
-						Vestibulum diam cubilia adipiscing interdum aliquet aliquet placerat cubilia accumsan cep ante
-						nullam adipiscing tortor odio. Iaculis adipiscing accumsan nascetur in cras. Lacinia placerat.
-					</p>
-					<p>Vestibulum diam quam, mollis at consectetur non, malesuada quis augue. Morbi tincidunt pretium
-						interdum. Morbi mattis elementum orci, nec dictum porta cursus justo. Quisque ultricies lorem in
-						ligula condimentum, et egestas turpis sagittis. Cras ac nunc urna. Nullam eget lobortis purus.
-						Phasellus vitae tortor non est placerat tristique faucibus magna adipiscing aliquet blandit nisi
-						dolor accumsan nascetur lorem. Vis enim. Curae. Mi arcu vis aliquam ipsum non accumsan ac mi
-						faucibus amet eu accumsan erat interdum semper accumsan. Eu sagittis tellus accumsan neque lorem
-						penatibus in porttitor. Vivamus commodo curae. Condimentum lobortis praesent id ac lorem. Lorem
-						vis ipsum dolor feugiat consequat dolore adipiscing.</p>
-					<h3>Sed Magna Ornare</h3>
-					<p>In vestibulum massa quis arcu lobortis tempus. Nam pretium arcu in odio vulputate luctus.
-						Suspendisse euismod lorem eget lacinia fringilla. Sed sed felis justo. Nunc sodales elit in
-						laoreet aliquam. Nam gravida, nisl sit amet iaculis porttitor, risus nisi rutrum metus. In
-						accumsan lorem nunc ultrices a ac eu accumsan ac id nullam. Nec lobortis. Faucibus. Mi commodo
-						laoreet arcu at non mi lacinia aliquet non lobortis phasellus accumsan nascetur varius. Integer
-						orci porttitor eu faucibus aliquet faucibus ac accumsan adipiscing accumsan odio. Ut adipiscing.
-					</p>
-					<ul>
-						<li>Faucibus orci lobortis ac adipiscing integer.</li>
-						<li>Col accumsan arcu mi aliquet placerat.</li>
-						<li>Lobortis vestibulum ut magna tempor massa nascetur.</li>
-						<li>Blandit massa non blandit tempor interdum.</li>
-						<li>Lacinia mattis arcu nascetur lobortis.</li>
-					</ul>
-				</section>
+						<!-- Sidebar -->
+						<section id="sidebar">
+							<h3>Sensor Setup and Gameplay</h3>
+							<hr />
+							<section>
+								<h4>Sensor Setup</h4>
+								<a href="#" class="image fit"><img src="images/sensing1.jpg" alt="" /></a>
+								<p>The four TF-Luna sensors each communicated with the Arduino via either UART or I2C.
+									Because we used four identical units, we determined that communication would be
+									simplest via I2C, and deconflicted our sensor network by modifying the I2C addresses
+									of each TF-Luna used. </p>
+								<h4>Gameplay</h4>
+								<p>Because of our sensor setup, we were able to utilize coordinates alone to navigate
+									the course and reach landmarks. The robot followed a small set of instructions to
+									reach each coordinate and complete each task, relying on distance measurements to
+									identify its position along each component of the trajectory between landmarks. For
+									simplicity, it was determined that each component would be limited to pure forward,
+									reverse, left, or right movement, enabled by our usage of mecanum wheels allowing
+									for rotation-free translation.
+								</p>
+							</section>
+						</section>
 
+					</div>
+					<div class="col-8 col-12-medium imp-medium">
+
+						<!-- Content -->
+						<section id="content">
+							<a href="#" class="image fit"><img src="images/sensing.jpg" alt="" /></a>
+							<h3>High-Level and Design Considerations</h3>
+							<p>Our primary consideration in choosing sensors was to select a sensor set which would
+								allow us to use human-like navigation methods. This meant that, ideally, our sensor set
+								would allow our robot to navigate the board with vision.
+							</p>
+							<hr />
+							<section>
+								<h4>Sensor Choice</h4>
+								<p>Our sensing objective was to approximate the position of the robot based on a minimal
+									set of distance measurements, taken at a relatively low sampling rate (whose lower
+									bound would be determined from the precise speed measurements afforded by our
+									stepper motors). We determined quickly that IR rangefinders and short/medium
+									distance LiDAR rangefinders would allow us sufficiently accurate distance measuring,
+									while also requiring minimal compute.
+								</p>
+								<a href="#" class="image fit"><img src="images/chart.jpg" alt="" /></a>
+								<p>Anticipating significant vibrations from the rough-surface mecanum wheels, we removed
+									the relatively noisy IR sensors from consideration. Our final sensor decision was
+									determined by the relative performance of our two LiDAR sensors, the VL53L0X and
+									TF-Luna, shown above. As our maximal required distance measurement on the board was
+									above the VL53L0X’s measurement threshold, causing significant error at larger
+									distances, we opted to use TF-Luna LiDAR sensors on the robot, with corrections for
+									low-distance error incorporated into sensor-chassis integration and code.
+								</p>
+							</section>
+							<section>
+								<h4>Sensor Configuration</h4>
+								<p>With accurate distance measurements as our only mode of positioning and control, our
+									robot required a sensor configuration capable of resolving both 1. Coordinate point
+									position on the board, and 2. Robot orientation on the board. Coordinate point
+									position resolution was simple, as the TF-Luna LiDAR sensors were accurate at almost
+									all distances on the board to approximately 3cm. </p>
+								<p>Orientation was slightly more complex. Initially, we determined that our minimal
+									sensing configuration would require six sensors, such that orientation on the board
+									could be resolved by comparing readings from forward and rear sensors on either the
+									port or the starboard side of the robot. This way, when the port or starboard
+									readings were equivalent at front and rear, the robot would determine that it is
+									oriented wall-normal, which we could use for navigation.
+								</p>
+								<a href="#" class="image fit"><img src="images/sensing8.jpg" alt="" /></a>
+								<p>However, we later determined that we could resolve robot orientation more accurately
+									through the more rudimentary method of coordinate estimation on a known map followed
+									by wall collision. This required just four sensors, as, assuming that each sensor
+									was accurate to a minute tolerance with appropriate calibration and low-range
+									handling, our minimal coordinate system required four distance measurements: front,
+									rear, left, and right. Ultimately, each sensor was placed at the center of each side
+									of the robot, and inset by approximately 5cm to mitigate TF-Luna inaccuracy at short
+									distances. </p>
+								<a href="#" class="image fit"><img src="images/sensing9.jpg" alt="" /></a>
+							</section>
+
+					</div>
+				</div>
 			</div>
 		</div>
 
 		<!-- Footer -->
 		<footer id="footer">
 			<ul class="icons">
-				<li><a href="#" class="icon brands alt fa-twitter"><span class="label">Twitter</span></a></li>
-				<li><a href="#" class="icon brands alt fa-facebook-f"><span class="label">Facebook</span></a></li>
-				<li><a href="#" class="icon brands alt fa-linkedin-in"><span class="label">LinkedIn</span></a></li>
-				<li><a href="#" class="icon brands alt fa-instagram"><span class="label">Instagram</span></a></li>
-				<li><a href="#" class="icon brands alt fa-github"><span class="label">GitHub</span></a></li>
+				<li><a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley"
+						class="icon brands alt fa-twitter"><span class="label">Twitter</span></a></li>
+				<li><a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley"
+						class="icon brands alt fa-facebook-f"><span class="label">Facebook</span></a></li>
+				<li><a href="https://www.linkedin.com/in/barackobama/" class="icon brands alt fa-linkedin-in"><span
+							class="label">LinkedIn</span></a></li>
+				<li><a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley"
+						class="icon brands alt fa-instagram"><span class="label">Instagram</span></a></li>
+				<li><a href="https://github.com/karpathy" class="icon brands alt fa-github"><span
+							class="label">GitHub</span></a></li>
 				<li><a href="#" class="icon solid alt fa-envelope"><span class="label">Email</span></a></li>
 			</ul>
 			<ul class="copyright">
 				<li>&copy; Palo Alto Dynamics. All rights reserved.</li>
-				<li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
 			</ul>
 		</footer>
 

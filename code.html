@@ -1,13 +1,8 @@
 <!DOCTYPE HTML>
-<!--
-	Landed by HTML5 UP
-	html5up.net | @ajlkn
-	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
--->
 <html>
 
 <head>
-	<title>No Sidebar - Landed by HTML5 UP</title>
+	<title>Payload</title>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" href="assets/css/main.css" />
@@ -46,62 +41,149 @@
 		<div id="main" class="wrapper style1">
 			<div class="container">
 				<header class="major">
-					<h2>Code</h2>
-					<p>Inter-Computer Communication, Code design and considerations</p>
+					<h2>Code and Gameplay</h2>
+					<p>Strategy and Control</p>
+					<!--
+					<p>Ipsum dolor feugiat aliquam tempus sed magna lorem consequat accumsan</p>
+					-->
 				</header>
+				<div class="row gtr-150">
+					<div class="col-4 col-12-medium">
 
-				<!-- Content -->
-				<section id="content">
-					<a href="#" class="image fit"><img src="images/paloAltoDynamics.jpg" alt="" /></a>
-					<h3>Dolore Amet Consequat</h3>
-					<p>Aliquam massa urna, imperdiet sit amet mi non, bibendum euismod est. Curabitur mi justo,
-						tincidunt vel eros ullamcorper, porta cursus justo. Cras vel neque eros. Vestibulum diam quam,
-						mollis at magna consectetur non, malesuada quis augue. Morbi tincidunt pretium interdum est.
-						Curabitur mi justo, tincidunt vel eros ullamcorper, porta cursus justo. Cras vel neque eros.
-						Vestibulum diam cubilia adipiscing interdum aliquet aliquet placerat cubilia accumsan cep ante
-						nullam adipiscing tortor odio. Iaculis adipiscing accumsan nascetur in cras. Lacinia placerat.
-					</p>
-					<p>Vestibulum diam quam, mollis at consectetur non, malesuada quis augue. Morbi tincidunt pretium
-						interdum. Morbi mattis elementum orci, nec dictum porta cursus justo. Quisque ultricies lorem in
-						ligula condimentum, et egestas turpis sagittis. Cras ac nunc urna. Nullam eget lobortis purus.
-						Phasellus vitae tortor non est placerat tristique faucibus magna adipiscing aliquet blandit nisi
-						dolor accumsan nascetur lorem. Vis enim. Curae. Mi arcu vis aliquam ipsum non accumsan ac mi
-						faucibus amet eu accumsan erat interdum semper accumsan. Eu sagittis tellus accumsan neque lorem
-						penatibus in porttitor. Vivamus commodo curae. Condimentum lobortis praesent id ac lorem. Lorem
-						vis ipsum dolor feugiat consequat dolore adipiscing.</p>
-					<h3>Sed Magna Ornare</h3>
-					<p>In vestibulum massa quis arcu lobortis tempus. Nam pretium arcu in odio vulputate luctus.
-						Suspendisse euismod lorem eget lacinia fringilla. Sed sed felis justo. Nunc sodales elit in
-						laoreet aliquam. Nam gravida, nisl sit amet iaculis porttitor, risus nisi rutrum metus. In
-						accumsan lorem nunc ultrices a ac eu accumsan ac id nullam. Nec lobortis. Faucibus. Mi commodo
-						laoreet arcu at non mi lacinia aliquet non lobortis phasellus accumsan nascetur varius. Integer
-						orci porttitor eu faucibus aliquet faucibus ac accumsan adipiscing accumsan odio. Ut adipiscing.
-					</p>
-					<ul>
-						<li>Faucibus orci lobortis ac adipiscing integer.</li>
-						<li>Col accumsan arcu mi aliquet placerat.</li>
-						<li>Lobortis vestibulum ut magna tempor massa nascetur.</li>
-						<li>Blandit massa non blandit tempor interdum.</li>
-						<li>Lacinia mattis arcu nascetur lobortis.</li>
-					</ul>
-				</section>
+						<!-- Sidebar -->
+						<section id="sidebar">
+							<h3>Modular Control Components</h3>
+							<hr />
+							<section>
+								<h4>Start Zone Orientation</h4>
+								<p>To resolve start zone orientation, precise measurements were taken inside the start
+									zone. It was determined that the LiDAR sensors were sufficiently accurate that
+									orientation, with the front sensor facing the goal, was resolvable by summing
+									front+rear measurements and left+right measurements and comparing them with the true
+									dimensions of the board. The robot then determined whether it was on the left board
+									or the right board depending on whether the left or right sensor read a smaller
+									value, and began translating left or right to contact the wall for minor orientation
+									correction accordingly.
+								</p>
+								<h4>Forward</h4>
+								<p>(-R_front, -R_rear, +L_front, +L_rear).</p>
+								<h4>Reverse</h4>
+								<p>(+R_front, +R_rear, -L_front, -L_rear).</p>
+								<h4>Left</h4>
+								<p>(-R_front, +R_rear, -L_front, +L_rear).</p>
+								<h4>Right</h4>
+								<p>(+R_front, -R_rear, +L_front, -L_rear).</p>
+							</section>
+						</section>
 
+					</div>
+					<div class="col-8 col-12-medium imp-medium">
+
+						<!-- Content -->
+						<section id="content">
+							<a href="#" class="image fit"><img src="images/gameplay_photo.jpg" alt="" /></a>
+							<h3>High-Level and Design Considerations</h3>
+							<p>With our sensor setup requiring significant processing power, and with our motor control
+								scheme requiring precise timing and synchronization, we determined that our minimal
+								computing configuration would consist of two Arduino Unos communicating via UART.
+								Instructions for robot movement would be handled by the primary Arduino, which was also
+								responsible for sensor communication. Granular motor control was handled by the
+								secondary Arduino. Motor control instructions (Forward, Reverse, Left, Right with power
+								level) were sent via UART from the primary Arduino to the secondary Arduino.
+							</p>
+							<hr />
+							<section>
+								<h4>Robot Control</h4>
+								<p>Robot movement was and game playing were controlled by the primary Arduino. The
+									control sequence was broken into two phases, in accordance with the game rules and
+									points scoring structure. In the first phase, the robot would first contact the
+									contact zone, then deposit balls at the goal, then (possibly) climb the ramp, and
+									return to the starting zone. In the second phase, having maximized one-time points,
+									the robot would lap from the start zone to the goal as fast as possible to maximize
+									uncapped points.
+								</p>
+								<p>Phase 1 was comprised of start zone orientation, translation until the frontal and
+									side distance measurements indicated that the robot was centered in the gap between
+									the start zone and the goal zone, movement and translation to the contact zone and
+									goal zone, ramp climbing, and return to the start zone. While we retained the ramp
+									for checkoff, because the ramp point bonus was small (4 points) for a significant
+									time penalty of approximately 20 seconds, we eliminated the ramp from the Phase 1
+									control sequence for the competition and elected to only deposit balls in Phases 1
+									and 2.
+								</p>
+								<a href="#" class="image fit"><img src="images/phase1.jpg" alt="" /></a>
+								<p>Phase 2 was comprised of start zone orientation via wall contact, followed by a
+									translate-forward-translate-ball drop-translate-reverse-translate sequence, with
+									transitions determined through frequent coordinate determination.
+								</p>
+								<a href="#" class="image fit"><img src="images/phase2.jpg" alt="" /></a>
+							</section>
+							<hr />
+							<section>
+								<h4>Speed and Direction Control</h4>
+								<p>Speed and direction were directly controlled by the secondary Arduino. With control
+									commands sent by the primary Arduino via a UART connection, the motor control
+									Arduino only had to execute each command without significant delay between command
+									for the first motor and command for the last motor.
+								</p>
+								<p>Through extensive modularization, we managed to minimize control latency to
+									manageable levels. However, due to wheel slippage, we still encountered issues with
+									precise robot orientation maintenance through each lap of the course.
+								</p>
+							</section>
+							<hr />
+							<section>
+								<h4>Inter-Computer Communication</h4>
+								<p>Inter-computer communication was handled through a UART connection between the two
+									Arduinos. This was possible because the sensors communicated with the primary
+									Arduino via I2C.
+								</p>
+								<p>For speed, the control commands were sent from the primary Arduino as a single byte,
+									with the most significant four bits representing the motor command (forward,
+									reverse, left, right, single-motor control), and the least significant four bits
+									representing the power level (mapped from the 0:15 range allowed with four bits onto
+									the 0:1000 range required for stepper motor control from 0 steps/sec to 1000
+									steps/sec). Encoding and decoding are shown below:
+								</p>
+								<code>
+									// encode command
+									void send_control_command( int command, int power_level ) {
+									command = command << 4;
+									byte bitVal = command + power_level;
+									Serial.write(bitVal);
+									}
+								</code>
+								<code>
+									// decode command
+									byte data_recv = Serial.read();
+									int command = (data_recv & UPPER_4_BIT_MASK) >> 4;
+									int speed = map( data_recv & LOWER_4_BIT_MASK, 0, MAX_PL, 0, MAX_SPEED );
+								</code>
+							</section>
+						</section>
+
+					</div>
+				</div>
 			</div>
 		</div>
 
 		<!-- Footer -->
 		<footer id="footer">
 			<ul class="icons">
-				<li><a href="#" class="icon brands alt fa-twitter"><span class="label">Twitter</span></a></li>
-				<li><a href="#" class="icon brands alt fa-facebook-f"><span class="label">Facebook</span></a></li>
-				<li><a href="#" class="icon brands alt fa-linkedin-in"><span class="label">LinkedIn</span></a></li>
-				<li><a href="#" class="icon brands alt fa-instagram"><span class="label">Instagram</span></a></li>
-				<li><a href="#" class="icon brands alt fa-github"><span class="label">GitHub</span></a></li>
+				<li><a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley"
+						class="icon brands alt fa-twitter"><span class="label">Twitter</span></a></li>
+				<li><a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley"
+						class="icon brands alt fa-facebook-f"><span class="label">Facebook</span></a></li>
+				<li><a href="https://www.linkedin.com/in/barackobama/" class="icon brands alt fa-linkedin-in"><span
+							class="label">LinkedIn</span></a></li>
+				<li><a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley"
+						class="icon brands alt fa-instagram"><span class="label">Instagram</span></a></li>
+				<li><a href="https://github.com/karpathy" class="icon brands alt fa-github"><span
+							class="label">GitHub</span></a></li>
 				<li><a href="#" class="icon solid alt fa-envelope"><span class="label">Email</span></a></li>
 			</ul>
 			<ul class="copyright">
 				<li>&copy; Palo Alto Dynamics. All rights reserved.</li>
-				<li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
 			</ul>
 		</footer>
 
