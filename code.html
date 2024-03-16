@@ -1293,7 +1293,7 @@ if ( (millis() - start_time_ms) > TOTAL_TIME_MS ) {
 	phase_1_stage = 999;
 	phase_2_stage = 999;
 	move_fwd( 0 );
-	digitalWrite( SPEAKER_PIN, HIGH ); // Turn on the speaker and fucking jam
+	digitalWrite( SPEAKER_PIN, HIGH );
 
 	if ( side_of_board ) {
 	servo1.write( CENTER_ANGLE + OFFSET_ANGLE_RIGHT );
