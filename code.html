@@ -161,6 +161,1292 @@
 									int speed = map( data_recv & LOWER_4_BIT_MASK, 0, MAX_PL, 0, MAX_SPEED );
 								</code></pre>
 							</section>
+							<section>
+								<h4>Primary Control Code:</h4>
+								<pre><code>
+
+									/*
+									- This script controls the master Arduino. 
+									- Input: Button press, 4x TF Luna sensor readings. 
+									- Output: Motor control commands (via UART), dispensing servo control (via digital IO), audio control (via digital IO). 
+									- Commented code snippets save program memory space, but as of 3/6 are functional.
+								  */
+								  #include <Arduino.h>
+								  #include <Wire.h>
+								  #include <Servo.h>
+								  #include <TFLI2C.h>
+								  #include <Servo.h>
+								  
+								  // --------------------------------------------------------------------------------
+								  
+								  /*
+									- ALL CONSTANTS DEFINED BELOW
+								  */
+								  #define SPEAKER_PIN 4                         // IO pin to control speaker relay
+								  #define SERVO_PIN 9                           // PWM pin to control release servo
+								  #define MAX_PL 15
+								  #define NUM_LUNAS 4
+								  #define LUNA_FRONT_IDX 0
+								  #define LUNA_REAR_IDX 3
+								  #define LUNA_LEFT_IDX 2
+								  #define LUNA_RIGHT_IDX 1
+								  #define WIDTH_OF_BOT 8
+								  #define LENGTH_OF_BOT 19
+								  #define COURSE_WIDTH 124
+								  #define COURSE_LENGTH 92
+								  #define EQUIDISTANT_TOL_CM 4
+								  #define FRONT_START_CM 51
+								  #define SIDE_START_CM 84
+								  #define PROXIMITY_TOL_CM 6
+								  #define REV_WALL_DIST_CM 150
+								  #define START_REV_TIME_MS 1200
+								  #define RAMP_TIME_MS 7000                    // CHANGE: was 5000
+								  #define OFFLOAD_TIME_MS 2000                 // offload interval - REFINE
+								  #define DISPENSE_CORRECTION_MS 200          // time to correct for servo actuator
+								  #define CENTER_ANGLE 100
+								  #define OFFSET_ANGLE_RIGHT -26
+								  #define OFFSET_ANGLE_LEFT 25
+								  #define RELOAD_TIME 1000                     // time to reload balls in start zone
+								  #define TOTAL_TIME_MS 130000
+								  Servo servo1;
+								  const int defaultAddress = TFL_DEF_ADR;
+								  uint8_t ADDRS[NUM_LUNAS] = {0x12, 0x16, 0x18, 0x20};  // Pre-defined new addresses
+								  TFLI2C tflI2C[NUM_LUNAS];
+								  bool side_of_board = false;  // false = left faces goal (right side of board), true = right faces goal (left side of board)
+								  int phase_1_stage = 0;
+								  bool stop_rotation = false;
+								  bool start_interval = false;
+								  bool start_interval_dispense = false;
+								  int phase_2_stage = 0;
+								  unsigned long start_time_ms = 0;
+								  unsigned long prev_time = 0;
+								  unsigned long curr_time = 0;
+								  unsigned long prev_time_dispense = 0;
+								  int luna_front = 0;
+								  int luna_rear = 0;
+								  int luna_left = 0;
+								  int luna_right = 0;
+								  
+								  
+								  // --------------------------------------------------------------------------------
+								  
+								  /*
+									- HELPER FUNCTIONS
+									- LiDAR reading: 
+									  - get_luna_front(); 
+									  - get_luna_rear();
+									  - get_luna_left();
+									  - get_luna_right();
+									- Motor control (speed argument is % of max. Call with nonzero argument for move, zero argument for stop): 
+									  - send_control_command(int command, int power_level);
+									  - set_speed_RF(int value);
+									  - set_speed_LF(int value);
+									  - set_speed_RR(int value);
+									  - set_speed_LR(int value);
+									  - set_speed_FWD(int value);
+									  - set_speed_REV(int value);
+									  - set_speed_LEFT(int value);
+									  - set_speed_RIGHT(int value);
+									  - dispenser_rotate_left();
+									  - dispenser_rotate_right();
+									  - dispenser_rotate_center();
+								  */
+								  int16_t get_luna_front() {
+									int16_t tfDist;
+									tflI2C[LUNA_FRONT_IDX].getData(tfDist, ADDRS[LUNA_FRONT_IDX]);
+									return ( tfDist ); 
+								  }
+								  int16_t get_luna_rear() {
+									int16_t tfDist;
+									tflI2C[LUNA_REAR_IDX].getData(tfDist, ADDRS[LUNA_REAR_IDX]);
+									return ( tfDist );
+								  }
+								  int16_t get_luna_left() {
+									int16_t tfDist;
+									tflI2C[LUNA_LEFT_IDX].getData(tfDist, ADDRS[LUNA_LEFT_IDX]);
+									return ( tfDist );
+								  }
+								  int16_t get_luna_right() {
+									int16_t tfDist;
+									tflI2C[LUNA_RIGHT_IDX].getData(tfDist, ADDRS[LUNA_RIGHT_IDX]);
+									return ( tfDist );
+								  }
+								  void send_control_command( int command, int power_level ) {
+									command = command << 4;
+									byte bitVal = command + power_level;
+									Serial.write(bitVal);
+								  }
+								  /*
+								  void set_speed_RF( int speed ) {
+									send_control_command( 12, (int)(speed*MAX_PL/100) );
+								  }
+								  void set_speed_LF( int speed ) {
+									send_control_command( 13, (int)(speed*MAX_PL/100) );
+								  }
+								  void set_speed_RR( int speed ) {
+									send_control_command( 14, (int)(speed*MAX_PL/100) );
+								  }
+								  void set_speed_LR( int speed ) {
+									send_control_command( 15, (int)(speed*MAX_PL/100) );
+								  }
+								  */
+								  void move_fwd( int speed ) {
+									send_control_command( 1, (int)(speed*MAX_PL/100) );
+								  }
+								  void move_rev( int speed ) {
+									send_control_command( 2, (int)(speed*MAX_PL/100) );
+								  }
+								  void move_left( int speed ) {
+									send_control_command( 3, (int)(speed*MAX_PL/100) );
+								  }
+								  void move_right( int speed ) {
+									send_control_command( 4, (int)(speed*MAX_PL/100) );
+								  }
+								  void move_rotate( int speed ) {
+									send_control_command( 5, (int)(speed*MAX_PL/100) );
+								  }
+								  bool dispenser_rotate_right( unsigned long curr_time, unsigned long prev_time_dispense ) {
+									// servo1.write(50);
+									// if ( !start_interval_dispense ) {
+									//   prev_time_dispense = millis();
+									//   start_interval_dispense = true;
+									//   servo1.write( CENTER_ANGLE + 10 );
+									// } 
+									if ( (curr_time - prev_time_dispense) > DISPENSE_CORRECTION_MS ) {
+									  // move dispense actuator to position 0
+									  servo1.write( CENTER_ANGLE + OFFSET_ANGLE_RIGHT );
+									  //start_interval_dispense = false;
+									} 
+									else{
+										servo1.write( CENTER_ANGLE + 10 );
+									}
+								  }
+								  void dispenser_rotate_left( unsigned long curr_time, unsigned long prev_time_dispense) {
+									// servo1.write(120);
+									// if ( !start_interval_dispense ) {
+									//   prev_time_dispense = millis();
+									//   start_interval_dispense = true;
+									//   servo1.write( CENTER_ANGLE - 10 );
+									// } 
+									if ( (curr_time - prev_time_dispense) > DISPENSE_CORRECTION_MS ) {
+									  // move dispense actuator to position 0
+									  servo1.write( CENTER_ANGLE + OFFSET_ANGLE_LEFT );
+									  //start_interval_dispense = false;
+									}
+									  else{
+										servo1.write( CENTER_ANGLE - 10 );
+									}
+								  }
+								  void dispenser_rotate_center() {
+									servo1.write( CENTER_ANGLE );
+								  }
+								  
+								  // --------------------------------------------------------------------------------
+								  
+								  /*
+									- Components tested: 
+									  - TF Luna 1, 2, 3, 4 (commented out but should prob keep it in)
+									  - Dispensing test (swivel to indicate ready)
+									  - Motors tested sequentially (not here tho)
+								  */
+								  void setup() {
+								  
+									// initialize ICC
+									Serial.begin(9600);
+									Wire.begin();
+								  
+									// initialize digital IO connections
+									pinMode( SPEAKER_PIN, OUTPUT );
+									servo1.attach( SERVO_PIN );
+									dispenser_rotate_center(); // sets the servo perpendicular to hopper
+								  
+									// test TF Luna
+									if ( !get_luna_front() || !get_luna_rear() || !get_luna_left() || !get_luna_right() ) {
+									  abort();
+									}
+								  
+									//test dispenser
+									/*
+									delay(2500);
+									dispenser_rotate_right();
+									delay(2500);
+									dispenser_rotate_center();
+									delay(2500);
+									dispenser_rotate_left();
+									delay(2500);
+									dispenser_rotate_center();
+									*/
+								  
+									// if success, set phase 1 stage as 1 and begin driving
+									phase_1_stage = 1;
+									start_time_ms = millis();
+								  
+								  }
+								  
+								  // --------------------------------------------------------------------------------
+								  
+								  /*
+									- Control sequence functions
+									- Testing (comment these out to save program memory): 
+									  - get_all_sensors();
+									  - test_communication_functionality();
+									- Phase 1: 
+									  - 1.1: align in start zone (and set +/- translation directions (which sets dispensing direction))
+									  - 1.2: translate in + direction until opening
+									  - 1.3: move fwd until timer (so we hit contact before dropping balls)
+									  - 1.4: translate in + direction until wall
+									  - 1.5: move fwd until wall (hitting contact along way)
+									  - 1.6: deposit balls
+									  - 1.7: reverse until wall
+									  - 1.8: translate until wall in - direction
+									  - 1.9: move forward until timer expires at max torque (360rpm)
+									  - 1.10: reverse until timer expires (equivalent to up timer)
+									  - 1.11: translate in + direction until gap + timer
+									  - 1.12: reverse until wall
+									  - 1.13: translate in - direction until wall (starting zone reentered)
+									- Phase 2: 
+									  - 2.1: translate in + direction until gap
+									  - 2.2: move fwd until wall
+									  - 2.3: translate in + direction until wall
+									  - 2.4: deposit balls
+									  - 2.5: reverse until wall
+									  - 2.6: translate in - direction until gap detected and timer (such that bot fits)
+									  - 2.7: reverse until wall
+									  - 2.8: translate in - direction until wall
+								  */
+								  
+								  void get_all_sensors() {
+									Serial.print("Luna Front: ");
+									Serial.println(get_luna_front());
+									Serial.print("Luna Rear: ");
+									Serial.println(get_luna_rear());
+									Serial.print("Luna Left: ");
+									Serial.println(get_luna_left());
+									Serial.print("Luna right: ");
+									Serial.println(get_luna_right());
+									Serial.println("");
+									delay(1000);
+								  }
+								  /*
+								  void test_communication_functionality() {
+									int speed = 50;
+									move_fwd( speed );
+									// move_rev( speed );
+									// move_left( speed );
+									// move_right( speed );
+								  }
+								  */
+								  
+								  // orient in start zone
+								  void phase_1_1() {
+								  
+									// get sensor readings
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									// rotate ccw until (left or right) and rear lidar read same value. use known frontal tolerance to approximate correct orientation, also use (other side sensor)
+									bool stopConditionLeftSide = ( abs( luna_right + luna_left + WIDTH_OF_BOT - COURSE_WIDTH ) < 2 ) && ( abs( luna_front + luna_rear + LENGTH_OF_BOT - COURSE_LENGTH ) < 2 ) && ( luna_left < luna_right ) && ( luna_rear < luna_front ) && ( luna_front < 130 ) && ( luna_rear < 130 ) && ( luna_left < 130 ) && ( luna_right < 130 );
+									bool stopConditionRightSide = ( abs( luna_right + luna_left + WIDTH_OF_BOT - COURSE_WIDTH ) < 2 ) && ( abs( luna_front + luna_rear + LENGTH_OF_BOT - COURSE_LENGTH ) < 2 ) && ( luna_left > luna_right ) && ( luna_rear < luna_front ) && ( luna_front < 130 ) && ( luna_rear < 130 ) && ( luna_left < 130 ) && ( luna_right < 130 );
+								  
+									if ( stopConditionLeftSide ) {
+									  side_of_board = true;  // orients all other commands. left => robot moves right toward goal. + -> right, - -> left. 
+									  stop_rotation = true;
+									}
+									else if ( stopConditionRightSide ) {
+									  side_of_board = false;  // orients all other commands. right => robot moves left toward goal. 
+									  stop_rotation = true;
+									}
+									else {
+									  move_rotate( 20 );
+									}
+								  
+									if ( stop_rotation ) {
+									  if ( side_of_board ) {
+										move_left( 20 );
+									  }
+									  else {
+										move_right( 20 );
+									  }
+									  if ( !start_interval ) {
+										prev_time = millis();
+										start_interval = true;
+									  }
+									  else {
+										if ( (millis() - prev_time) > START_REV_TIME_MS ) {
+										  move_right( 0 );
+										  start_interval = false;
+										  stop_rotation = false;
+										  phase_1_stage = 2;  // transition to stage 2
+										}
+									  }
+									}
+								  
+								  }
+								  
+								  // translate until gap +
+								  void phase_1_2() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+									
+									bool stopTranslateCondition = luna_front > (FRONT_START_CM + 30);
+								  
+									if ( stopTranslateCondition ) {
+									  if ( !start_interval ) {
+										prev_time = millis();
+										start_interval = true;
+									  } 
+									  else {
+										if ( (millis() - prev_time) > 650 ) {
+										  move_fwd( 0 );
+										  start_interval = false;
+										  phase_1_stage = 3;  // transition to stage 3
+										} 
+										else {
+										  if ( side_of_board ) {
+											move_right( 30 );
+										  } 
+										  else {
+											move_left( 30 );
+										  }
+										}
+									  }
+									} else {
+									  if ( side_of_board ) {
+										  move_right( 30 );
+									  } 
+									  else {
+										move_left( 30 );
+									  }
+									}
+								  
+								  }
+								  
+								  // fwd until just past gap
+								  void phase_1_3() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+									// was (luna_front < 150) && (luna_rear > 30)
+									if ( (luna_front < 132) && (luna_rear > 30) ) { // magic number is a measurement-derived test value
+									  move_fwd( 0 );
+									  phase_1_stage = 4;
+									} 
+									else if ( (luna_rear < (2*PROXIMITY_TOL_CM)) && (luna_front > 160) ){
+									  move_fwd( 30 );
+									}
+									else if ( (luna_rear < (3*PROXIMITY_TOL_CM)) && (luna_front > 170) ){
+									  move_fwd( 55 );
+									}
+									else {
+									  move_fwd( 70 );
+									}
+								  
+								  }
+								  
+								  // translate until wall +
+								  void phase_1_4() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( side_of_board ) {
+									  if ( luna_right > (PROXIMITY_TOL_CM + 2) ) { // CHANGE: was +3
+										move_right( 30 );
+									  } 
+									  else {
+										move_right( 0 );
+										phase_1_stage = 5;
+									  }
+									} 
+									else {
+									  if ( luna_left > (PROXIMITY_TOL_CM + 2) ) { //CHANGE: was + 3 // FINETUNED
+										move_left( 30 );
+									  } 
+									  else {
+										move_left( 0 );
+										phase_1_stage = 5;
+									  }
+									}
+								  
+								  }
+								  
+								  // move fwd until wall (hit contact along way)
+								  void phase_1_5() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( luna_front < (PROXIMITY_TOL_CM + 2) ) {
+									  move_fwd( 0 );
+									  phase_1_stage = 6;
+									} 
+									else {
+									  move_fwd( 50 );
+									}
+								  
+									if ( (luna_left < (PROXIMITY_TOL_CM + 8)) && (luna_left > (PROXIMITY_TOL_CM + 2)) ) {
+									  move_left( 20 );
+									}
+									else if ( (luna_right < (PROXIMITY_TOL_CM + 8)) && (luna_right > (PROXIMITY_TOL_CM + 2)) ) {
+									  move_right( 20 );
+									}
+								  
+								  }
+								  
+								  // dispense balls and hold timer
+								  void phase_1_6() {
+								  
+									curr_time = millis();
+								  
+									if ( !start_interval ) {
+									  prev_time = millis();
+									  curr_time = millis();
+									  start_interval = true;
+									  if ( side_of_board ) {
+											servo1.write( CENTER_ANGLE + 10 );
+										}
+										else {
+											servo1.write( CENTER_ANGLE - 10 );
+										}
+									} 
+									else if ( (curr_time - prev_time) > OFFLOAD_TIME_MS ) {
+									  // move dispense actuator to position 0
+									  dispenser_rotate_center();
+									  phase_1_stage = 7;
+									  start_interval = false;
+									} 
+									else {
+									  if ( !start_interval_dispense ) {
+										prev_time_dispense = millis();
+										start_interval_dispense = true;
+									  } 
+									  // DISPENSE BALLS
+									  if ( side_of_board ) {
+										// dispense right
+										dispenser_rotate_right( curr_time, prev_time_dispense );
+									  } 
+									  else {
+										// dispense left
+										dispenser_rotate_left( curr_time, prev_time_dispense );
+									  }
+									  
+									}
+								  
+								  }
+								  
+								  // REVISED 1.7 TO EXCLUDE RAMP. IF RAMP, COMMENT THIS OUT AND INCLUDE THE OTHER phase_1_7() THROUGH phase_1_11().
+								  void phase_1_7() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( side_of_board ) {
+									  if ( luna_rear > REV_WALL_DIST_CM ) {
+										if ( !start_interval ) {
+										  prev_time = millis();
+										  start_interval = 1;
+										}
+										else {
+										  if ( (millis() - prev_time) > 650 ) {  // THIS ALSO HAS TO BE DETERMINED THROUGH EXPERIMENT AND DEPENDS ON SPEED
+											move_left( 0 );
+											start_interval = 0;
+											phase_1_stage = 12;
+										  }
+										}
+									  }
+									  else {
+										move_left( 30 );
+									  }
+									}
+									else {
+									  if ( luna_rear > REV_WALL_DIST_CM ) {
+										if ( !start_interval ) {
+										  prev_time = millis();
+										  start_interval = 1;
+										}
+										else {
+										  if ( (millis() - prev_time) > 650 ) {  // THIS ALSO HAS TO BE DETERMINED THROUGH EXPERIMENT AND DEPENDS ON SPEED
+											move_right( 0 );
+											start_interval = 0;
+											phase_1_stage = 12;
+										  }
+										}
+									  }
+									  else {
+										move_right( 30 );
+									  }
+									}
+								  
+								  }
+								  
+								  void phase_1_8() {
+									return;
+								  }
+								  
+								  void phase_1_9() {
+									return;
+								  }
+								  
+								  void phase_1_10() {
+									return;
+								  }
+								  
+								  void phase_1_11() {
+									return;
+								  }
+								  
+								  /*
+								  // reverse until wall
+								  void phase_1_7() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( luna_rear < (PROXIMITY_TOL_CM + 12) ) {
+									  move_rev( 0 ); 
+									  phase_1_stage = 8;
+									} 
+									else {
+									  move_rev( 40 );
+									}
+								  
+								  }
+								  
+								  // translate in + direction until wall + tol
+								  void phase_1_8() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( side_of_board ) {
+									  if ( luna_left > (PROXIMITY_TOL_CM + 10) ) {
+										move_left( 30 );
+									  } 
+									  else {
+										move_left( 0 );
+										phase_1_stage = 9;
+									  }
+									} 
+									else {
+									  if ( luna_right > (PROXIMITY_TOL_CM + 10) ) {
+										move_right( 30 );
+									  } 
+									  else {
+										move_right( 0 );
+										phase_1_stage = 9;
+									  }
+									}
+								  
+								  }
+								  
+								  // move fwd up ramp
+								  void phase_1_9() {
+									
+									if ( !start_interval ) {
+									  prev_time = millis();
+									  start_interval = true;
+									} 
+									else if ( (millis() - prev_time) > RAMP_TIME_MS ) {
+									  move_fwd( 0 );
+									  start_interval = false;
+									  phase_1_stage = 10;
+									} 
+									else {
+									  move_fwd( 18 );
+									}
+								  
+								  }
+								  
+								  // reverse down ramp
+								  void phase_1_10() {
+									
+									if ( !start_interval ) {
+									  prev_time = millis();
+									  start_interval = true;
+									} 
+									else if ( (millis() - prev_time) > (0.5*RAMP_TIME_MS) ) {
+									  move_rev( 0 );
+									  start_interval = false;
+									  phase_1_stage = 11;
+									} 
+									else {
+									  move_rev( 20 );
+									}
+								  
+								  }
+								  
+								  // translate until gap in -
+								  void phase_1_11() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( luna_rear > ( 40 ) ) {
+									  if ( !start_interval ) {
+										prev_time = millis();
+										start_interval = true;
+									  }
+									  else if ( (millis() - prev_time) > 100 ) { // THIS DEPENDS ON THE SPEED USED AND HAS TO BE TESTED
+										move_fwd( 0 );
+										start_interval = false;
+										phase_1_stage = 12;
+									  }
+									}
+									else {
+									  if ( side_of_board ) {
+										move_right( 40 );
+									  }
+									  else {
+										move_left( 40 );
+									  }
+									}
+								  
+								  }
+								  */
+								  
+								  // reverse until wall
+								  void phase_1_12() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( luna_rear < (4.25*PROXIMITY_TOL_CM) ) {
+									  move_rev( 0 );
+									  phase_1_stage = 13;
+									}
+									else if ( (luna_rear < (5*PROXIMITY_TOL_CM)) && (luna_front > (5*PROXIMITY_TOL_CM)) )
+									{
+									  move_rev( 30 );
+									}
+									else if ( (luna_front < (3*PROXIMITY_TOL_CM)) && (luna_rear > (5*PROXIMITY_TOL_CM)) )
+									{
+									  move_rev( 30 );
+									}
+									else if ( (luna_front < (4*PROXIMITY_TOL_CM)) && (luna_rear > (5*PROXIMITY_TOL_CM)) )
+									{
+									  move_rev( 55 );
+									}
+									else if ( (luna_front < (5.5*PROXIMITY_TOL_CM)) && (luna_rear > (5*PROXIMITY_TOL_CM)) )
+									{
+									  move_rev( 75 );
+									}
+									else {
+									  move_rev( 95 );
+									}
+								  
+								  }
+								  
+								  // translate in - until start
+								  void phase_1_13() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( side_of_board ) {
+									  if ( luna_left < (2*PROXIMITY_TOL_CM) ) {
+										move_left( 0 );
+										phase_1_stage = 999;
+										phase_2_stage = 1;
+										delay( RELOAD_TIME );
+									  }
+									  else {
+										move_left( 40 );
+									  }
+									} 
+									else {
+									  if ( luna_right < (2*PROXIMITY_TOL_CM) ) {
+										move_right( 0 );
+										phase_1_stage = 999;
+										phase_2_stage = 1;
+										delay( RELOAD_TIME );
+									  }
+									  else {
+										move_right( 40 );
+									  }
+									}
+								  
+								  }
+								  
+								  // begin phase 2: orient
+								  void phase_2_1() {
+								  
+									// get sensor readings
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									// rotate ccw until (left or right) and rear lidar read same value. use known frontal tolerance to approximate correct orientation, also use (other side sensor)
+									bool stopConditionLeftSide = ( abs( luna_right + luna_left + WIDTH_OF_BOT - COURSE_WIDTH ) < 2 ) && ( abs( luna_front + luna_rear + LENGTH_OF_BOT - COURSE_LENGTH ) < 2 ) && ( luna_left < luna_right ) && ( luna_rear < luna_front ) && ( luna_front < 130 ) && ( luna_rear < 130 ) && ( luna_left < 130 ) && ( luna_right < 130 );
+									bool stopConditionRightSide = ( abs( luna_right + luna_left + WIDTH_OF_BOT - COURSE_WIDTH ) < 2 ) && ( abs( luna_front + luna_rear + LENGTH_OF_BOT - COURSE_LENGTH ) < 2 ) && ( luna_left > luna_right ) && ( luna_rear < luna_front ) && ( luna_front < 130 ) && ( luna_rear < 130 ) && ( luna_left < 130 ) && ( luna_right < 130 );
+								  
+									/*
+									if ( stopConditionLeftSide ) {
+									  side_of_board = true;  // orients all other commands. left => robot moves right toward goal. + -> right, - -> left. 
+									  stop_rotation = true;
+									}
+									else if ( stopConditionRightSide ) {
+									  side_of_board = false;  // orients all other commands. right => robot moves left toward goal. 
+									  stop_rotation = true;
+									}
+									else {
+									  move_rotate( 20 );
+									}
+								  
+									if ( stop_rotation ) {
+									  if ( side_of_board ) {
+										move_left( 15 );
+									  }
+									  else {
+										move_right( 15 );
+									  }
+									  if ( !start_interval ) {
+										prev_time = millis();
+										start_interval = true;
+									  }
+									  else {
+										if ( (millis() - prev_time) > (0.5*START_REV_TIME_MS) ) {
+										  move_right( 0 );
+										  start_interval = false;
+										  stop_rotation = false;
+										  phase_2_stage = 2;  // transition to stage 2
+										}
+									  }
+									}
+									*/
+									phase_2_stage = 2;
+								  
+								  }
+								  
+								  // translate until gap
+								  void phase_2_2() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+									
+									bool stopTranslateCondition = (luna_front > (FRONT_START_CM + 30));
+								  
+									if ( stopTranslateCondition ) {
+									  if ( !start_interval ) {
+										prev_time = millis();
+										start_interval = true;
+									  }
+									  else {
+										if ( (millis() - prev_time) > 650 ) {
+										  move_fwd( 0 );
+										  start_interval = false;
+										  phase_2_stage = 3;  // transition to stage 3
+										} 
+										else {
+										  if ( side_of_board ) {
+											move_right( 30 );
+										  } 
+										  else {
+											move_left( 30 );
+										  }
+										}
+									  }
+									} else {
+									  if ( side_of_board ) {
+										  move_right( 30 );
+									  } 
+									  else {
+										move_left( 30 );
+									  }
+									}
+								  
+								  }
+								  
+								  // move fwd until wall
+								  void phase_2_3() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( luna_front < (2.5*PROXIMITY_TOL_CM) ) {
+									  move_fwd( 0 );
+									  phase_2_stage = 4;
+									}
+									else if ( (luna_front < (3.5*PROXIMITY_TOL_CM)) && (luna_rear > (5*PROXIMITY_TOL_CM)) ) {
+									  move_fwd( 20 );
+									}
+									else if ( (luna_rear < (2*PROXIMITY_TOL_CM)) && (luna_front > (5*PROXIMITY_TOL_CM)) ) {
+									  move_fwd( 30 );
+									}
+									else if ( (luna_rear < (4*PROXIMITY_TOL_CM)) && (luna_front > (5*PROXIMITY_TOL_CM)) ) {
+									  move_fwd( 50 );
+									}
+									else if ( (luna_rear < (5.5*PROXIMITY_TOL_CM)) && (luna_front > (5*PROXIMITY_TOL_CM)) ) {
+									  move_fwd( 75 );
+									}
+									else {
+									  move_fwd( 90 );
+									}
+								  
+								  }
+								  
+								  // translate until wall (in + direction)
+								  void phase_2_4() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( side_of_board ) {
+									  if ( luna_right < (PROXIMITY_TOL_CM + 2) ) {
+										move_right( 0 );
+										phase_2_stage = 5;
+									  }
+									  else {
+										move_right( 30 );
+									  }
+									}
+									else {
+									  if ( luna_left < (PROXIMITY_TOL_CM + 2) ) {
+										move_left( 0 );
+										phase_2_stage = 5;
+									  }
+									  else {
+										move_left( 30 );
+									  }
+									}
+								  
+									if ( (luna_front > (PROXIMITY_TOL_CM + 5)) ) {
+									  move_fwd( 20 );
+									}
+								  
+								  }
+								  
+								  // drop balls
+								  void phase_2_5() {
+								  
+									curr_time = millis();
+								  
+									if ( !start_interval ) {
+									  prev_time = millis();
+									  curr_time = millis();
+									  start_interval = true;
+									  if ( side_of_board ) {
+											servo1.write( CENTER_ANGLE + 10 );
+										}
+										else {
+											servo1.write( CENTER_ANGLE - 10 );
+										}
+									} 
+									else if ( (curr_time - prev_time) > OFFLOAD_TIME_MS ) {
+									  // move dispense actuator to position 0
+									  dispenser_rotate_center();
+									  phase_2_stage = 6;
+									  start_interval = false;
+									} 
+									else {
+									  if ( !start_interval_dispense ) {
+										prev_time_dispense = millis();
+										start_interval_dispense = true;
+									  } 
+									  // DISPENSE BALLS
+									  if ( side_of_board ) {
+										// dispense right
+										dispenser_rotate_right( curr_time, prev_time_dispense );
+									  } 
+									  else {
+										// dispense left
+										dispenser_rotate_left( curr_time, prev_time_dispense );
+									  }
+									  
+									}
+								  }
+								  // translate - direction until gap
+								  void phase_2_6() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( side_of_board ) {
+									  if ( luna_rear > REV_WALL_DIST_CM ) {
+										if ( !start_interval ) {
+										  prev_time = millis();
+										  start_interval = 1;
+										}
+										else {
+										  if ( (millis() - prev_time) > 650 ) {  // THIS ALSO HAS TO BE DETERMINED THROUGH EXPERIMENT AND DEPENDS ON SPEED
+											move_left( 0 );
+											start_interval = 0;
+											phase_2_stage = 7;
+										  }
+										}
+									  }
+									  else {
+										move_left( 30 );
+									  }
+									}
+									else {
+									  if ( luna_rear > REV_WALL_DIST_CM ) {
+										if ( !start_interval ) {
+										  prev_time = millis();
+										  start_interval = 1;
+										}
+										else {
+										  if ( (millis() - prev_time) > 650 ) {  // THIS ALSO HAS TO BE DETERMINED THROUGH EXPERIMENT AND DEPENDS ON SPEED
+											move_right( 0 );
+											start_interval = 0;
+											phase_2_stage = 7;
+										  }
+										}
+									  }
+									  else {
+										move_right( 30 );
+									  }
+									}
+								  
+								  }
+								  
+								  // reverse until wall
+								  void phase_2_7() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( luna_rear < (3*PROXIMITY_TOL_CM) ) {
+									  move_rev( 0 );
+									  phase_2_stage = 8;
+									}
+									else if ( luna_front < (2*PROXIMITY_TOL_CM) ) {
+									  move_rev( 20 );
+									}
+									else if ( luna_front < (3*PROXIMITY_TOL_CM) ) {
+									  move_rev( 45 );
+									}
+									else if ( (luna_front < (4.5*PROXIMITY_TOL_CM)) && (luna_rear > (5*PROXIMITY_TOL_CM))) {
+									  move_rev( 65 );
+									}
+									else if ( (luna_rear < (4.5*PROXIMITY_TOL_CM)) && (luna_front > (5*PROXIMITY_TOL_CM)) ) {
+									  move_rev( 30 );
+									}
+									else {
+									  move_rev( 80 );
+									}
+								  
+								  }
+								  
+								  // translate in - direction until wall
+								  void phase_2_8() {
+								  
+									// get sensor readings - necessary to keep all values updated
+									luna_front = get_luna_front();
+									luna_rear = get_luna_rear();
+									luna_right = get_luna_right();
+									luna_left = get_luna_left();
+								  
+									if ( side_of_board ) {
+									  if ( luna_left < (1.5*PROXIMITY_TOL_CM) ) {
+										move_left( 0 );
+										delay( RELOAD_TIME );
+										phase_2_stage = 1;
+									  }
+									  else {
+										move_left( 30 );
+									  }
+									} 
+									else {
+									  if ( luna_right < (1.5*PROXIMITY_TOL_CM) ) {
+										move_right( 0 );
+										delay( RELOAD_TIME );
+										phase_2_stage = 1;
+									  }
+									  else {
+										move_right( 30 );
+									  }
+									}
+								  
+								  }
+								  
+								  // --------------------------------------------------------------------------------
+								  
+								  /*
+									- main loop
+								  */
+								  void loop() {
+								  
+									//get_all_sensors();
+								  
+									// dispenser_rotate_right();
+									// delay( 2000 );
+									// dispenser_rotate_center();
+									// delay( 2000 );
+								  
+									
+									if ( phase_1_stage == 1 ) {
+									  phase_1_1();
+									}
+									else if ( phase_1_stage == 2 ) {
+									  phase_1_2();
+									}
+									else if ( phase_1_stage == 3 ) {
+									  phase_1_3();
+									}
+									else if ( phase_1_stage == 4 ) {
+									  phase_1_4();
+									}
+									else if ( phase_1_stage == 5 ) {
+									  phase_1_5();
+									}
+									else if ( phase_1_stage == 6) {
+									  phase_1_6();
+									}
+									else if ( phase_1_stage == 7 ) {
+									  phase_1_7();
+									}
+									else if ( phase_1_stage == 8 ) {
+									  phase_1_8();
+									}
+									else if ( phase_1_stage == 9 ) {
+									  phase_1_9();
+									}
+									else if ( phase_1_stage == 10 ) {
+									  phase_1_10();
+									}
+									else if ( phase_1_stage == 11 ) {
+									  phase_1_11();
+									}  
+									else if ( phase_1_stage == 12 ) {
+									  phase_1_12();
+									}
+									else if ( phase_1_stage == 13 ) {
+									  phase_1_13();
+									}
+									
+									else if ( phase_2_stage == 1 ) {
+									  phase_2_1();
+									}
+									else if ( phase_2_stage == 2 ) {
+									  phase_2_2();
+									}
+									else if ( phase_2_stage == 3 ) {
+									  phase_2_3();
+									}
+									else if ( phase_2_stage == 4 ) {
+									  phase_2_4();
+									}
+									else if ( phase_2_stage == 5 ) {
+									  phase_2_5();
+									}
+									else if ( phase_2_stage == 6 ) {
+									  phase_2_6();
+									}
+									else if ( phase_2_stage == 7 ) {
+									  phase_2_7(); 
+									}
+									else if ( phase_2_stage == 8 ) {
+									  phase_2_8();
+									}
+								  
+									// exit sequence
+									if ( (millis() - start_time_ms) > TOTAL_TIME_MS ) {
+									  phase_1_stage = 999;
+									  phase_2_stage = 999;
+									  move_fwd( 0 );
+									  digitalWrite( SPEAKER_PIN, HIGH ); // Turn on the speaker and fucking jam
+								  
+									  if ( side_of_board ) {
+										servo1.write( CENTER_ANGLE + OFFSET_ANGLE_RIGHT );
+									  } 
+									  else {
+										servo1.write( CENTER_ANGLE + OFFSET_ANGLE_LEFT );
+									  }
+								  
+									}
+								  
+								  }
+
+								</code></pre>
+							</section>
+							<section>
+								<h4>Primary Control Code:</h4>
+								<pre><code>
+
+									/*
+									- This script controls the motor control Arduino.
+									- Input: UART from master Arduino (command and power level).
+									- Output: Motor control commands. 
+								  */
+								  #include "AccelStepper.h"
+								  #include <Wire.h>
+								  
+								  // --------------------------------------------------------------------------------
+								  
+								  /*
+									- ALL CONSTANTS DEFINED BELOW. Also motors initialized. 
+									- Layout: stepper1 NW, stepper2 NE, stepper3 SE, stepper4 SW.
+									- Steppers initialized as AccelStepper objects. 
+								  */
+								  #define RX0 0;
+								  #define TX0 1;
+								  #define numsteps 200
+								  #define MAX_SPEED 1000
+								  #define MAX_PL 15
+								  #define dirPin1 7
+								  #define stepPin1 4
+								  #define dirPin2 5
+								  #define stepPin2 2
+								  #define dirPin3 6
+								  #define stepPin3 3
+								  #define dirPin4 13
+								  #define stepPin4 12
+								  #define motorInterfaceType 1
+								  AccelStepper stepper1 = AccelStepper(motorInterfaceType, stepPin1, dirPin1); 
+								  AccelStepper stepper2 = AccelStepper(motorInterfaceType, stepPin2, dirPin2);
+								  AccelStepper stepper3 = AccelStepper(motorInterfaceType, stepPin3, dirPin3);
+								  AccelStepper stepper4 = AccelStepper(motorInterfaceType, stepPin4, dirPin4);
+								  const unsigned char UPPER_4_BIT_MASK = 0xF0; // 11110000	
+								  const unsigned char LOWER_4_BIT_MASK = 0x0F; // 00001111
+								  
+								  // --------------------------------------------------------------------------------
+								  
+								  /*
+									- HELPER FUNCTIONS
+									- Directional control: 
+									  - move_fwd( int speed );
+									  - move_rev( int speed );
+									  - move_left( int speed );
+									  - move_right( int speed );
+									- speed given as percentage of max speed (0:100 maps to 0:1000)
+								  */
+								  void move_fwd( int speed ) {
+									stepper1.setSpeed( speed ); // LR
+									stepper2.setSpeed( speed ); // LF
+									stepper3.setSpeed( -speed ); // RF
+									stepper4.setSpeed( -speed ); // RR
+								  }
+								  void move_rev( int speed ) {
+									stepper1.setSpeed( -speed ); // LR
+									stepper2.setSpeed( -speed ); // LF
+									stepper3.setSpeed( speed ); // RF
+									stepper4.setSpeed( speed ); // RR
+								  }
+								  void move_left( int speed ) {
+									stepper1.setSpeed( speed );
+									stepper2.setSpeed( -speed );
+									stepper3.setSpeed( -speed );
+									stepper4.setSpeed( speed );
+								  }
+								  void move_right( int speed ) {
+									stepper1.setSpeed( -speed );
+									stepper2.setSpeed( speed );
+									stepper3.setSpeed( speed );
+									stepper4.setSpeed( -speed );
+								  }
+								  void rotate( int speed ) {  
+									stepper1.setSpeed( speed );
+									stepper2.setSpeed( speed );
+									stepper3.setSpeed( speed );
+									stepper4.setSpeed( speed );
+								  }
+								  
+								  // --------------------------------------------------------------------------------
+								  
+								  /*
+									- Components tested: 
+								  */
+								  void setup() {
+									Serial.begin(9600);
+									stepper1.setMaxSpeed(MAX_SPEED);
+									stepper2.setMaxSpeed(MAX_SPEED);
+									stepper3.setMaxSpeed(MAX_SPEED);
+									stepper4.setMaxSpeed(MAX_SPEED);
+								  }
+								  
+								  // --------------------------------------------------------------------------------
+								  
+								  /*
+									- main loop
+								  */
+								  void loop() {
+								  
+									if ( Serial.available() ) {
+								  
+									  // decode command
+									  byte data_recv = Serial.read();
+									  int command = (data_recv & UPPER_4_BIT_MASK) >> 4;
+									  int speed = map( data_recv & LOWER_4_BIT_MASK, 0, MAX_PL, 0, MAX_SPEED );
+								  
+									  // execute commands
+									  if ( command == 1 ) { 
+										move_fwd( speed ); 
+									  }
+									  else if ( command == 2 ) {
+										move_rev( speed ); 
+									  }
+									  else if ( command == 3 ) {
+										move_left( speed ); 
+									  }
+									  else if ( command == 4 ) {
+										move_right( speed ); 
+									  }
+									  else if ( command == 5 ) {
+										rotate( speed ); 
+									  }
+								  
+									}
+									// move_right( 200 );
+								  
+									// continually run motors
+									stepper1.runSpeed();
+									stepper2.runSpeed();
+									stepper3.runSpeed();
+									stepper4.runSpeed();
+								  
+								  }
+
+								</code></pre>
+							</section>
 							<li>Code can be found in the GitHub repository <a
 									href="https://github.com/jbaileyiii/ME210/tree/main/Code/final_sketches">here.</a>
 							</li>
