@@ -63,29 +63,42 @@
 						is a 5V bus, which powers the speaker and payload deployment servo. This streamlined power 
 						distribution system delivered consistent power to all subsystems, while maximizing motor power.
 					</p>
-					<p>Vestibulum diam quam, mollis at consectetur non, malesuada quis augue. Morbi tincidunt pretium
-						interdum. Morbi mattis elementum orci, nec dictum porta cursus justo. Quisque ultricies lorem in
-						ligula condimentum, et egestas turpis sagittis. Cras ac nunc urna. Nullam eget lobortis purus.
-						Phasellus vitae tortor non est placerat tristique faucibus magna adipiscing aliquet blandit nisi
-						dolor accumsan nascetur lorem. Vis enim. Curae. Mi arcu vis aliquam ipsum non accumsan ac mi
-						faucibus amet eu accumsan erat interdum semper accumsan. Eu sagittis tellus accumsan neque lorem
-						penatibus in porttitor. Vivamus commodo curae. Condimentum lobortis praesent id ac lorem. Lorem
-						vis ipsum dolor feugiat consequat dolore adipiscing.</p>
-					<h3>Sed Magna Ornare</h3>
-					<p>In vestibulum massa quis arcu lobortis tempus. Nam pretium arcu in odio vulputate luctus.
-						Suspendisse euismod lorem eget lacinia fringilla. Sed sed felis justo. Nunc sodales elit in
-						laoreet aliquam. Nam gravida, nisl sit amet iaculis porttitor, risus nisi rutrum metus. In
-						accumsan lorem nunc ultrices a ac eu accumsan ac id nullam. Nec lobortis. Faucibus. Mi commodo
-						laoreet arcu at non mi lacinia aliquet non lobortis phasellus accumsan nascetur varius. Integer
-						orci porttitor eu faucibus aliquet faucibus ac accumsan adipiscing accumsan odio. Ut adipiscing.
+					<h3>Motors</h3>
+					<p>The stepper motors are powered using DRV8825 stepper motor driver modules, with all four connected 
+						to the motor control arduino board with an expansion shield. The DRV8825s allow for independent 
+						motor current control, allowing us to deliver the maximum rated current to each of our NEMA 17 
+						stepper motors, 1.5A. At 1.5A, each motor delivers 42 N/cm of torque. Based on intial estimations 
+						for toruqe requirements, the bot only needed 9.4 N/cm per wheel to meet the highest torque demand, 
+						which would occur during the ramp climb. See the image below for details on the calculations. This 
+						highlights the benefit of a four-wheel drive system. Though it demanded a significant amount of 
+						power, up to six amps at peak, it provided ample torque. Even when the team upgraded to wheels
+						with a larger diameter, increasing peak torque demand to 15 N/cm, the motors far exceeded that need. 
 					</p>
+
+					<p>Speed requirements were also well within the range of our NEMA 17 motors. Even intially, 5 cm wheels
+						were installed, resulting in a targeted maximum speed of 306 rpm. Detailed calculations can be found
+						in the image below. Similar to our torque delivery, the motors were more than able to meet our 
+						demand for high speed operations. When we later installed larger diameter wheels, our speed 
+						increased further, requiring us to operate well below maximum capacity due to small size of the 
+						playing field. 
+					
+					</p>
+					<h3>Power Subsystems</h3>
+					<p>Three subsystems were used to power the bot. The motors received up to 18.5V directly from the two 
+						nickel metal hydride, 6-cell batteries providing up to 3600mAh. In parallel with that system are two 
+						variable voltage buck converters powering a 9V bus and a 5V bus. The 9V bus powered the two ardunios,
+						which in turn powered the four LiDAR sensors off of the Ardunio's 5V power supply. The relatively high
+						current loads of the payload deployment system servo and the celebration speaker exceeded the capacity 
+						of the Ardunio, necessitating the addition of the separate 5V bus to power those accessories.  
+					</p>
+					<h3>Components List</h3>
 					<ul>
-						<li>Faucibus orci lobortis ac adipiscing integer.</li>
-						<li>Col accumsan arcu mi aliquet placerat.</li>
-						<li>Lobortis vestibulum ut magna tempor massa nascetur.</li>
-						<li>Blandit massa non blandit tempor interdum.</li>
-						<li>Lacinia mattis arcu nascetur lobortis.</li>
-					</ul>
+						<li>2x 7.2V nickel metal hydride, 6-cell batteries providing up to 3600mAh</li>
+						<li>2x Variable voltage buck converters</li>
+						<li>4x DRV8825 stepper motor controllers</li>
+						<li>4x 1.5A, Bipolar, Nema 17 Stepper Motors<li>
+						<li>1x Arduino board expansion shield</li>
+						</ul>
 				</section>
 
 			</div>
